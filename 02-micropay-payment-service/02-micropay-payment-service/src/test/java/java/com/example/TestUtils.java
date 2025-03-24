@@ -22,165 +22,182 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class TestUtils {
 
-    public static final String TEXT_RESET = "\033[0m";
-    public static final String RED_BOLD_BRIGHT = "\033[1;91m"; // RED
-    public static final String GREEN_BOLD_BRIGHT = "\033[1;92m"; // GREEN
-    public static final String YELLOW_BOLD_BRIGHT = "\033[1;93m";// YELLOW
-    public static final String BLUE_BOLD_BRIGHT = "\033[1;94m"; // BLUE
+	public static final String TEXT_RESET = "\033[0m";
+	public static final String RED_BOLD_BRIGHT = "\033[1;91m"; // RED
+	public static final String GREEN_BOLD_BRIGHT = "\033[1;92m"; // GREEN
+	public static final String YELLOW_BOLD_BRIGHT = "\033[1;93m";// YELLOW
+	public static final String BLUE_BOLD_BRIGHT = "\033[1;94m"; // BLUE
 
-    public static String testResult;
+	public static String testResult;
 
-    public static int total;
-    public static int passed;
-    public static int failed;
+	public static int total;
+	public static int passed;
+	public static int failed;
 
-    public static File businessTestFile;
-    public static File boundaryTestFile;
-    public static File exceptionTestFile;
-    public static File xmlFile;
+	public static File businessTestFile;
+	public static File boundaryTestFile;
+	public static File exceptionTestFile;
+	public static File xmlFile;
 
-    public static final String GUID = "6ed39465-d6d3-4ec4-b27d-1dcb870b2992";
-    public static String customData;
-    public static final String URL = "https://yaksha-prod-sbfn.azurewebsites.net/api/YakshaMFAEnqueue?code=jSTWTxtQ8kZgQ5FC0oLgoSgZG7UoU9Asnmxgp6hLLvYId/GW9ccoLw==";
-    static {
-        total = 0;
-        passed = 0;
-        failed = 0;
+	public static final String GUID = "6ed39465-d6d3-4ec4-b27d-1dcb870b2992";
+	public static String customData;
+	public static final String URL =  "https://compiler.techademy.com/v1/mfa-results/push";
 
-        testResult = "";
+	static {
+		total = 0;
+		passed = 0;
+		failed = 0;
 
-        businessTestFile = new File("./output_revised.txt");
-        businessTestFile.delete();
+		testResult = "";
 
-        boundaryTestFile = new File("./output_boundary_revised.txt");
-        boundaryTestFile.delete();
+		businessTestFile = new File("./output_revised.txt");
+		businessTestFile.delete();
 
-        exceptionTestFile = new File("./output_exception_revised.txt");
-        exceptionTestFile.delete();
-    }
+		boundaryTestFile = new File("./output_boundary_revised.txt");
+		boundaryTestFile.delete();
 
-    private static String readData(String filePath) {
-        StringBuilder contentBuilder = new StringBuilder();
+		exceptionTestFile = new File("./output_exception_revised.txt");
+		exceptionTestFile.delete();
+	}
 
-        try (Stream<String> stream = Files.lines(Paths.get(filePath), StandardCharsets.UTF_8)) {
-            stream.forEach(s -> contentBuilder.append(s).append("\n"));
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.out.println(e.getMessage());
-        }
+	private static String readData(String filePath) {
+		StringBuilder contentBuilder = new StringBuilder();
 
-        return contentBuilder.toString();
-    }
+		try (Stream<String> stream = Files.lines(Paths.get(filePath), StandardCharsets.UTF_8)) {
+			stream.forEach(s -> contentBuilder.append(s).append("\n"));
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.out.println(e.getMessage());
+		}
 
-    public static void yakshaAssert(String testName, Object result, File file) throws IOException {
-        TestResults testResults = new TestResults();
-        Map<String, TestCaseResultDto> testCaseResults = new HashMap<String, TestCaseResultDto>();
+		return contentBuilder.toString();
+	}
 
-        customData = readData("../../custom.ih");
-        String resultStatus = "Failed";
-        int resultScore = 0;
-        if (result.toString().equals("true")) {
-            resultScore = 1;
-            resultStatus = "Passed";
-        }
-        try {
-            String testType = "functional";
-            if (file.getName().contains("boundary"))
-                testType = "boundary";
-            if (file.getName().contains("exception"))
-                testType = "exception";
-            testCaseResults.put(GUID,
-                    new TestCaseResultDto(testName, testType, 1, resultScore, resultStatus, true, ""));
-        } catch (Exception e) {
+	public static void yakshaAssert(String testName, Object result, File file) throws IOException {
+		TestResults testResults = new TestResults();
+		Map<String, TestCaseResultDto> testCaseResults = new HashMap<String, TestCaseResultDto>();
 
-            e.printStackTrace();
-            System.out.println(e.getMessage());
-        }
-        testResults.setTestCaseResults(asJsonString(testCaseResults));
-        testResults.setCustomData(customData);
+		customData = readData("../custom.ih");
+		String resultStatus = "Failed";
+		int resultScore = 0;
+		if (result.toString().equals("true")) {
+			resultScore = 1;
+			resultStatus = "Passed";
+		}
+		try {
+			String testType = "functional";
+			if (file.getName().contains("boundary"))
+				testType = "boundary";
+			if (file.getName().contains("exception"))
+				testType = "exception";
+			testCaseResults.put(GUID,
+					new TestCaseResultDto(testName, testType, 1, resultScore, resultStatus, true, ""));
+		} catch (Exception e) {
 
-        try {
+			e.printStackTrace();
+			System.out.println(e.getMessage());
+		}
+		
+		String hostName = System.getenv("HOSTNAME");
+		String AttemptId = System.getenv("ATTEMPT_ID");
 
-            URL url = new URL(URL);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setDoOutput(true);
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
+		testResults.setTestCaseResults(asJsonString(testCaseResults));
+		testResults.setCustomData(customData);
+		testResults.setHosttName(hostName);
+		testResults.setAttemptId(AttemptId);
 
-            // String input = "{\"qty\":100,\"name\":\"iPad 4\"}";
-            String input = asJsonString(testResults);
-            OutputStream os = conn.getOutputStream();
-            os.write(input.getBytes());
-            os.flush();
+		int length = 0;
+		if(customData != null) {length = customData.length(); }
 
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                    (conn.getInputStream())));
 
-            String output;
-            while ((output = br.readLine()) != null) {
-                System.out.println(output);
-            }
+		try {
 
-            conn.disconnect();
+			URL url = new URL(URL);
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setDoOutput(true);
+			conn.setRequestMethod("POST");
+			conn.setRequestProperty("Content-Type", "application/json");
 
-        } catch (MalformedURLException e) {
+			//	String input = "{\"qty\":100,\"name\":\"iPad 4\"}";
+			String input = asJsonString(testResults);
+			OutputStream os = conn.getOutputStream();
+			os.write(input.getBytes());
+			os.flush();
+			os.close();
 
-            e.printStackTrace();
+			int responseCode = conn.getResponseCode();
+			if (!(responseCode == HttpURLConnection.HTTP_OK  || responseCode == HttpURLConnection.HTTP_CREATED)) { 
+				System.out.println(RED_BOLD_BRIGHT + "⚠️ Unable to push test cases,please try again! [" + responseCode +"|" + hostName +"|" + AttemptId + "|" + length + "]" + TEXT_RESET);
+			}
 
-        } catch (IOException e) {
 
-            e.printStackTrace();
 
-        }
+			// BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
 
-        total++;
-        String[] r = testName.split("(?=\\p{Upper})");
-        System.out.print("\n" + BLUE_BOLD_BRIGHT + "=>");
+			// // String output;
+			// // while ((output = br.readLine()) != null) {
+			// // 	System.out.println(output);
+			// // }
 
-        System.out.print(YELLOW_BOLD_BRIGHT + "Test For : ");
+			conn.disconnect();
 
-        for (int i = 1; i < r.length; i++) {
-            System.out.print(YELLOW_BOLD_BRIGHT + r[i] + " ");
+		} catch (MalformedURLException e) {
 
-        }
-        System.out.print(" : ");
+			e.printStackTrace();
 
-        if (result.toString().equals("true")) {
-            System.out.println(GREEN_BOLD_BRIGHT + "PASSED" + TEXT_RESET);
-            passed++;
-        } else {
-            System.out.println(RED_BOLD_BRIGHT + "FAILED" + TEXT_RESET);
-            failed++;
-        }
-    }
+		} catch (IOException e) {
 
-    public static void testReport() {
+			e.printStackTrace();
 
-        System.out.print("\n" + BLUE_BOLD_BRIGHT + "TEST CASES EVALUATED : " + total
-                + TEXT_RESET);
-        System.out.print("\n" + GREEN_BOLD_BRIGHT + "PASSED : " + passed +
-                TEXT_RESET);
-        System.out.println("\n" + RED_BOLD_BRIGHT + "FAILED : " + failed +
-                TEXT_RESET);
+		}
 
-    }
+		total++;
+		String[] r = testName.split("(?=\\p{Upper})");
+		System.out.print("\n" + BLUE_BOLD_BRIGHT + "=>");
 
-    public static String currentTest() {
-        return Thread.currentThread().getStackTrace()[2].getMethodName();
-    }
+		System.out.print(YELLOW_BOLD_BRIGHT + "Test For : ");
 
-    // convert object into JSON
-    public static String asJsonString(Object obj) {
-        ObjectMapper mapper = new ObjectMapper();
-        String jsonString = "";
-        try {
-            jsonString = mapper.writeValueAsString(obj);
-        } catch (JsonProcessingException e) {
+		for (int i = 1; i < r.length; i++) {
+			System.out.print(YELLOW_BOLD_BRIGHT + r[i] + " ");
 
-            e.printStackTrace();
-        }
-        return jsonString;
+		}
+		System.out.print(" : ");
 
-    }
+		if (result.toString().equals("true")) {
+			System.out.println(GREEN_BOLD_BRIGHT + "PASSED" + TEXT_RESET);
+			passed++;
+		} else {
+			System.out.println(RED_BOLD_BRIGHT + "FAILED" + TEXT_RESET);
+			failed++;
+		}
+	}
+
+	public static void testReport() {
+
+		System.out.print("\n" + BLUE_BOLD_BRIGHT + "TEST CASES EVALUATED : " + total + TEXT_RESET);
+		System.out.print("\n" + GREEN_BOLD_BRIGHT + "PASSED : " + passed + TEXT_RESET);
+		System.out.println("\n" + RED_BOLD_BRIGHT + "FAILED : " + failed + TEXT_RESET);
+
+	}
+
+	public static String currentTest() {
+		return Thread.currentThread().getStackTrace()[2].getMethodName();
+	}
+
+	// convert object into JSON
+	public static String asJsonString(Object obj) {
+		ObjectMapper mapper = new ObjectMapper();
+		String jsonString = "";
+		try {
+			jsonString = mapper.writeValueAsString(obj);
+//			System.out.println("jsonString");
+//			System.out.println(jsonString);
+		} catch (JsonProcessingException e) {
+
+			e.printStackTrace();
+		}
+		return jsonString;
+
+	}
 
 }
